@@ -7,8 +7,8 @@
 | Campo | Detalle |
 | --- | --- |
 | **Documento** | Especificación de Requisitos de Software |
-| **Versión** | 1.1 |
-| **Fecha** | 18 de junio de 2026 |
+| **Versión** | 1.2 |
+| **Fecha** | 22 de junio de 2026 |
 | **Empresa** | Nothing Sense (En formación) |
 | **Autor** | Steven Ricardo Quiñones (CTO) |
 | **Revisor** | Fredinson Solano (CEO) |
@@ -24,6 +24,7 @@
 | 0.9 | 17/06/2026 | Borrador con introducción, descripción general y requisitos funcionales/no funcionales. | Steven R. Quiñones |
 | 1.0 | 17/06/2026 | Primera versión completa: se incorporan reglas de negocio, criterios de aceptación, casos de uso detallados, modelo conceptual de datos, diagramas de estado, matrices de trazabilidad y aprobación del documento. | Steven R. Quiñones |
 | 1.1 | 18/06/2026 | Actualización gerencial: Modelo operativo financiero, firmas, escrow, comisiones dinámicas, multas por disputas y exclusión de responsabilidad. | Fredinson Solano |
+| 1.2 | 22/06/2026 | Trazabilidad completa CU↔RF: se incorporan los casos de uso CU-11 (perfil y servicios), CU-12 (notificaciones) y CU-13 (reportes y paneles), y se amplían CU-01 (recuperación, MFA, roles, cuenta) y CU-05 (alertas), de modo que los 60 requisitos funcionales queden asociados a un caso de uso. | Steven R. Quiñones |
 
 ---
 
@@ -619,6 +620,9 @@ flowchart LR
         CU08(["CU-08<br/>Calificar a la<br/>otra parte"])
         CU09(["CU-09<br/>Gestionar una<br/>disputa"])
         CU10(["CU-10<br/>Administrar la<br/>plataforma"])
+        CU11(["CU-11<br/>Gestionar perfil y<br/>publicar servicios"])
+        CU12(["CU-12<br/>Gestionar<br/>notificaciones"])
+        CU13(["CU-13<br/>Consultar reportes<br/>y paneles"])
     end
 
     CLI --- CU01
@@ -641,6 +645,15 @@ flowchart LR
     PRO --- CU09
     MED --- CU09
     ADM --- CU10
+    PRO --- CU11
+    EMP --- CU11
+    CLI --- CU12
+    PRO --- CU12
+    EMP --- CU12
+    CLI --- CU13
+    PRO --- CU13
+    EMP --- CU13
+    ADM --- CU13
 
     CU06 -.->|"«include»"| CU01
     CU04 -.->|"«include»"| CU06
@@ -669,28 +682,34 @@ Cada caso de uso se describe con su actor principal, los actores secundarios, la
 | **Actores secundarios** | Servicio de correo |
 | **Descripción** | Permite a una persona o empresa crear su cuenta y verificar su identidad para operar en la plataforma. |
 | **Precondiciones** | El usuario no posee una cuenta activa con el mismo correo o NIT. |
-| **Postcondiciones** | La cuenta queda creada y, si la verificación es exitosa, habilitada para firmar contratos. |
-| **Requisitos asociados** | RF-001, RF-002, RF-003, RF-004 |
-| **Reglas asociadas** | RN-001, RN-002 |
+| **Postcondiciones** | La cuenta queda creada con su rol asignado y, si la verificación es exitosa, habilitada para firmar contratos. |
+| **Requisitos asociados** | RF-001, RF-002, RF-003, RF-004, RF-005, RF-006, RF-007, RF-008 |
+| **Reglas asociadas** | RN-001, RN-002, RN-010, RN-011 |
 
 ##### CU-01: Flujo principal
 
 1. El usuario abre el formulario de registro y elige el tipo de cuenta (individual o corporativa).
 2. El usuario introduce sus datos y acepta los términos de uso y la política de tratamiento de datos.
 3. El sistema valida los datos y crea la cuenta en estado «pendiente de verificación».
-4. El sistema envía un correo de confirmación.
-5. El usuario carga la documentación de identidad para el proceso KYC.
-6. El sistema valida la identidad y marca la cuenta como «verificada».
+4. El sistema asigna el rol correspondiente (cliente, profesional o empresa) con sus permisos diferenciados (RF-007).
+5. El sistema envía un correo de confirmación.
+6. El usuario carga la documentación de identidad para el proceso KYC.
+7. El sistema valida la identidad y marca la cuenta como «verificada».
+8. El usuario configura su segundo factor de autenticación (MFA), exigible para las operaciones sensibles de firma y pago (RF-006, RN-010).
 
 ##### CU-01: Flujos alternativos
 
 - 2a. El usuario no acepta los términos: el sistema impide continuar.
-- 5a. El usuario pospone el KYC: la cuenta queda creada pero sin habilitar la firma.
+- 6a. El usuario pospone el KYC: la cuenta queda creada pero sin habilitar la firma.
+- 8a. El usuario pospone la configuración de MFA: el sistema la exigirá antes de la primera operación de firma o pago (RN-010).
+- R1. Recuperación de contraseña: un usuario registrado solicita restablecerla y el sistema le envía un enlace seguro a su correo para definir una nueva (RF-005).
+- R2. Cierre de cuenta: el usuario desactiva su propia cuenta; el sistema la inhabilita conservando el histórico contractual (RF-008).
 
 ##### CU-01: Excepciones
 
 - 3a. El correo o el NIT ya existen: el sistema rechaza el registro e informa.
-- 6a. La verificación falla: el sistema solicita reintentar o corregir la documentación.
+- 7a. La verificación falla: el sistema solicita reintentar o corregir la documentación.
+- S1. Cuenta suspendida por el administrador: el usuario no puede operar hasta su rehabilitación (RF-008, RN-011).
 
 #### CU-02. Publicar una necesidad
 
@@ -785,7 +804,7 @@ Cada caso de uso se describe con su actor principal, los actores secundarios, la
 | **Descripción** | Permite redactar, negociar y aprobar un contrato formal antes de su firma. |
 | **Precondiciones** | Las partes están autenticadas y verificadas. |
 | **Postcondiciones** | El contrato queda aprobado y listo para firma. |
-| **Requisitos asociados** | RF-025, RF-026, RF-027, RF-028, RF-029, RF-031, RF-032 |
+| **Requisitos asociados** | RF-025, RF-026, RF-027, RF-028, RF-029, RF-030, RF-031, RF-032 |
 | **Reglas asociadas** | RN-009, RN-012 |
 
 ##### CU-05: Flujo principal
@@ -795,10 +814,12 @@ Cada caso de uso se describe con su actor principal, los actores secundarios, la
 3. Las partes negocian; cada cambio aceptado genera una nueva versión (RN-012).
 4. El contrato pasa por el flujo de aprobación multinivel configurado.
 5. Aprobado, el contrato queda listo para firma (continúa en CU-06).
+6. Durante su vigencia, el sistema emite alertas de vencimiento y renovación con la antelación configurada (RF-030).
 
 ##### CU-05: Flujos alternativos
 
 - 4a. Un aprobador rechaza: el contrato vuelve a edición con observaciones.
+- 6a. Próximo vencimiento sin renovación: el sistema notifica a las partes y, de no renovarse, el contrato avanza a «terminado» (RF-030, RF-029).
 
 ##### CU-05: Excepciones
 
@@ -941,6 +962,91 @@ Cada caso de uso se describe con su actor principal, los actores secundarios, la
 ##### CU-10: Excepciones
 
 - 2b. Acción sobre una entidad protegida (p. ej., contrato firmado): el sistema impide su eliminación (RN-013).
+
+#### CU-11. Gestionar perfil y publicar servicios
+
+| Campo | Detalle |
+| --- | --- |
+| **Actor principal** | Profesional / Empresa |
+| **Actores secundarios** | Cliente (consulta el perfil público) |
+| **Descripción** | Permite a un profesional o empresa construir su identidad en la plataforma, publicar sus servicios y gestionar su disponibilidad y visibilidad. |
+| **Precondiciones** | El usuario está autenticado. |
+| **Postcondiciones** | El perfil y los servicios quedan actualizados y visibles según lo que el usuario decida hacer público. |
+| **Requisitos asociados** | RF-009, RF-010, RF-011, RF-012, RF-013, RF-015 |
+| **Reglas asociadas** | RN-008, RN-011 |
+
+##### CU-11: Flujo principal
+
+1. El usuario accede a la edición de su perfil profesional o de empresa (RF-009, RF-010).
+2. Registra o actualiza sus habilidades, experiencia, certificaciones y portafolio, o la información corporativa.
+3. Clasifica y publica sus servicios u ofertas en el catálogo por categorías (RF-011, RF-015).
+4. Indica su disponibilidad para asumir nuevos trabajos o contratos (RF-013).
+5. Define qué información será visible públicamente, incluida su reputación (RF-012).
+6. El sistema guarda los cambios y los refleja en el perfil público.
+
+##### CU-11: Flujos alternativos
+
+- 3a. El usuario guarda una oferta como borrador: no se hace visible hasta su publicación.
+- 4a. El usuario se marca como no disponible: deja de aparecer en las recomendaciones de emparejamiento.
+
+##### CU-11: Excepciones
+
+- 1a. Usuario suspendido: el sistema impide publicar perfil u ofertas (RN-011).
+- 5a. Reputación por debajo del mínimo de valoraciones: no se muestra públicamente aún (RN-008).
+
+#### CU-12. Gestionar notificaciones
+
+| Campo | Detalle |
+| --- | --- |
+| **Actor principal** | Cliente / Profesional / Empresa |
+| **Actores secundarios** | Servicio de correo |
+| **Descripción** | Permite al usuario recibir avisos de los eventos relevantes del ciclo contractual y configurar qué notificaciones desea recibir y por qué canal. |
+| **Precondiciones** | El usuario está autenticado. |
+| **Postcondiciones** | El usuario queda informado de los eventos y sus preferencias de notificación quedan registradas. |
+| **Requisitos asociados** | RF-046, RF-047, RF-048 |
+| **Reglas asociadas** | — |
+
+##### CU-12: Flujo principal
+
+1. Ante un evento relevante (propuesta, firma, pago o vencimiento), el sistema genera la notificación correspondiente.
+2. El sistema muestra la notificación dentro de la aplicación (RF-046).
+3. Para los eventos críticos, el sistema envía además una notificación por correo electrónico (RF-047).
+4. El usuario consulta sus notificaciones y, opcionalmente, configura sus preferencias por tipo y canal (RF-048).
+
+##### CU-12: Flujos alternativos
+
+- 4a. El usuario desactiva un canal o tipo de notificación: el sistema deja de enviarle esos avisos por ese canal.
+
+##### CU-12: Excepciones
+
+- 3a. El servicio de correo no está disponible: el sistema reintenta el envío y conserva la notificación en la aplicación.
+
+#### CU-13. Consultar reportes y paneles de control
+
+| Campo | Detalle |
+| --- | --- |
+| **Actor principal** | Cliente / Profesional / Empresa / Administrador |
+| **Actores secundarios** | — |
+| **Descripción** | Permite a cada usuario consultar el resumen de su actividad y, a usuarios corporativos y administradores, generar y exportar reportes e indicadores. |
+| **Precondiciones** | El usuario está autenticado y solo accede a la información permitida por su rol. |
+| **Postcondiciones** | El usuario obtiene la información o el reporte solicitado. |
+| **Requisitos asociados** | RF-052, RF-053, RF-054, RF-055 |
+| **Reglas asociadas** | RN-009 |
+
+##### CU-13: Flujo principal
+
+1. El usuario accede a su panel de control con el resumen de contratos, acuerdos, pagos y notificaciones (RF-052).
+2. Genera reportes sobre el estado, los vencimientos y el valor de los contratos (RF-053).
+3. El usuario corporativo consulta indicadores agregados de su cartera de contratos y proveedores (RF-054).
+4. El usuario exporta los reportes en formato PDF o de hoja de cálculo (RF-055).
+
+##### CU-13: Flujos alternativos
+
+- 3a. Usuario individual: visualiza únicamente el panel y los reportes de su propia actividad.
+
+##### CU-13: Excepciones
+
+- 1a. El usuario intenta consultar información fuera de su alcance: el sistema la deniega conforme al control de acceso (RN-009).
 
 ### 4.3 Modelo conceptual de datos
 
@@ -1096,18 +1202,21 @@ Las matrices de trazabilidad permiten verificar que cada elemento del análisis 
 
 | Caso de uso | Requisitos funcionales |
 | --- | --- |
-| **CU-01** Registrarse y verificar identidad | RF-001, RF-002, RF-003, RF-004 |
+| **CU-01** Registrarse y verificar identidad | RF-001, RF-002, RF-003, RF-004, RF-005, RF-006, RF-007, RF-008 |
 | **CU-02** Publicar una necesidad | RF-014, RF-016, RF-017 |
 | **CU-03** Postularse a una necesidad | RF-018, RF-019 |
 | **CU-04** Generar y cerrar un acuerdo informal | RF-020, RF-021, RF-022, RF-023, RF-024, RF-039, RF-040 |
-| **CU-05** Crear y negociar un contrato formal | RF-025, RF-026, RF-027, RF-028, RF-029, RF-031, RF-032 |
+| **CU-05** Crear y negociar un contrato formal | RF-025, RF-026, RF-027, RF-028, RF-029, RF-030, RF-031, RF-032 |
 | **CU-06** Firmar un contrato | RF-033, RF-034, RF-035, RF-036 |
 | **CU-07** Realizar y liberar un pago | RF-037, RF-038, RF-039, RF-040, RF-041, RF-042 |
 | **CU-08** Calificar a la otra parte | RF-043, RF-044, RF-045 |
 | **CU-09** Gestionar una disputa | RF-049, RF-050, RF-051 |
 | **CU-10** Administrar la plataforma | RF-056, RF-057, RF-058, RF-059, RF-060 |
+| **CU-11** Gestionar perfil y publicar servicios | RF-009, RF-010, RF-011, RF-012, RF-013, RF-015 |
+| **CU-12** Gestionar notificaciones | RF-046, RF-047, RF-048 |
+| **CU-13** Consultar reportes y paneles de control | RF-052, RF-053, RF-054, RF-055 |
 
-> Requisitos sin caso de uso de alto nivel directo (cubiertos por funcionalidad transversal): RF-005, RF-006, RF-007, RF-008 (acceso y cuenta); RF-009 a RF-013 (perfiles); RF-015 (oferta de servicio); RF-030 (alertas); RF-046 a RF-048 (notificaciones); RF-052 a RF-055 (reportes).
+> **Cobertura completa.** Los 60 requisitos funcionales (RF-001 a RF-060) están asociados al menos a un caso de uso, garantizando la trazabilidad total. Los requisitos RF-039 y RF-040 (custodia y liberación de fondos) participan tanto en CU-04 (acuerdo informal) como en CU-07 (pago), por su naturaleza transversal.
 
 ### 5.2 Trazabilidad requisitos funcionales ↔ no funcionales
 
@@ -1197,4 +1306,4 @@ La presente especificación debe ser revisada y aprobada por los responsables de
 | **Revisor** | Fredinson Solano Rois | Revisión técnica y de completitud | 18/06/2026 | _______________ |
 | **Aprobador** | _______________ | Aprobación para pasar a diseño | ***/***/______ | _______________ |
 
-> Este documento se considera la línea base de requisitos (versión 1.0). Cualquier cambio posterior debe gestionarse mediante control de versiones, registrando la modificación en el historial de revisiones y, cuando corresponda, incrementando la versión del documento.
+> Este documento constituye la línea base de requisitos vigente (versión 1.2). Cualquier cambio posterior debe gestionarse mediante control de versiones, registrando la modificación en el historial de revisiones y, cuando corresponda, incrementando la versión del documento.
